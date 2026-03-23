@@ -1,0 +1,26 @@
+{
+  "model_type": "Tuned XGBoost",
+  "r2": 0.6747,
+  "mae": 958313.58,
+  "rmse": 1325974.63,
+  "feature_names": [
+    "area",
+    "bedrooms",
+    "bathrooms",
+    "stories",
+    "mainroad",
+    "guestroom",
+    "basement",
+    "hotwaterheating",
+    "airconditioning",
+    "parking",
+    "prefarea",
+    "furnishingstatus",
+    "PricePerSqft_proxy",
+    "BedBathRatio",
+    "AreaPerBedroom",
+    "HasGarage",
+    "IsMultiStorey"
+  ],
+  "log_transform": true
+}
