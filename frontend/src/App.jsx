@@ -10,7 +10,7 @@ function App() {
 
   useEffect(() => {
     // Fetch dynamic fields configuration from FastAPI
-    fetch('http://localhost:5000/api/fields')
+    fetch('https://house-price-predection-system.onrender.com/api/fields')
       .then(res => res.json())
       .then(data => {
         setFields(data.fields);
@@ -52,7 +52,7 @@ function App() {
     });
 
     try {
-      const resp = await fetch('http://localhost:5000/predict', {
+      const resp = await fetch('https://house-price-predection-system.onrender.com/predict', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
