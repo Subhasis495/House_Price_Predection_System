@@ -158,8 +158,8 @@ def load_model_from_disk():
 
 @app.on_event("startup")
 def startup_event():
-    # If the CSV exists, train on startup
-    if os.path.exists(CSV_PATH):
+    success = load_model_from_disk()
+    if not success:
         train_and_save_model()
     else:
         # Fallback to loading existing local artifacts 
