@@ -8,6 +8,14 @@ function App() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
+  // New states for Currency, Asking Price, and EMI
+  const [currency, setCurrency] = useState('USD');
+  const [askingPrice, setAskingPrice] = useState('');
+  const [loanTerm, setLoanTerm] = useState(20);
+  const [interestRate, setInterestRate] = useState(7.0);
+
+  const exchangeRate = 83.5; // Fixed exchange rate for demo
+
   useEffect(() => {
     // Fetch dynamic fields configuration from FastAPI
     fetch('https://house-price-predection-system.onrender.com/api/fields')
@@ -71,6 +79,46 @@ function App() {
     }
   };
 
+  const formatCurrency = (value) => {
+    if (currency === 'INR') {
+      return new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        maximumFractionDigits: 0
+      }).format(value * exchangeRate);
+    } else {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: 0
+      }).format(value);
+    }
+  };
+
+  const getDealBadge = () => {
+    if (!result || !askingPrice || isNaN(askingPrice)) return null;
+    
+    // Value relative to target display currency
+    const targetVal = currency === 'INR' ? result.raw * exchangeRate : result.raw;
+    const askingVal = parseFloat(askingPrice);
+    
+    if (askingVal < targetVal * 0.95) return { text: "🎉 Great Deal", className: "badge-success" };
+    if (askingVal > targetVal * 1.05) return { text: "⚠️ Overpriced", className: "badge-danger" };
+    return { text: "🤝 Fair Price", className: "badge-warning" };
+  };
+
+  const calculateEMI = () => {
+    if (!result) return 0;
+    const principal = currency === 'INR' ? result.raw * exchangeRate : result.raw;
+    const r = (parseFloat(interestRate) / 100) / 12;
+    const n = parseFloat(loanTerm) * 12;
+    
+    if (!principal || !r || !n || n <= 0) return 0;
+    
+    const emi = (principal * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+    return emi;
+  };
+
   return (
     <div className="app-container">
       <div className="blob-1"></div>
@@ -126,8 +174,20 @@ function App() {
 
         {/* Right Result Panel */}
         <div className="glass glass-panel results-panel">
+          
+          {/* Top Bar for settings (Currency toggle) */}
+          <div className="settings-bar">
+             <div className="currency-toggle">
+               <span className={currency === 'USD' ? 'active' : ''} onClick={() => setCurrency('USD')}>USD $</span>
+               <div className={`switch-track ${currency}`} onClick={() => setCurrency(currency === 'USD' ? 'INR' : 'USD')}>
+                  <div className="switch-thumb"></div>
+               </div>
+               <span className={currency === 'INR' ? 'active' : ''} onClick={() => setCurrency('INR')}>INR ₹</span>
+             </div>
+          </div>
+
           {!result && !error && !loading && (
-            <div className="placeholder-state animate-fade-in">
+            <div className="placeholder-state animate-fade-in" style={{marginTop: 'auto', marginBottom: 'auto'}}>
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
@@ -136,25 +196,68 @@ function App() {
           )}
 
           {loading && (
-            <div className="placeholder-state animate-fade-in">
+            <div className="placeholder-state animate-fade-in" style={{marginTop: 'auto', marginBottom: 'auto'}}>
               <div className="spinner" style={{width: 48, height: 48, borderColor: 'var(--accent)', borderTopColor: 'transparent'}}></div>
               <h3>Analyzing patterns...</h3>
             </div>
           )}
 
           {error && (
-            <div className="error-message animate-fade-in">
+            <div className="error-message animate-fade-in" style={{marginTop: 'auto', marginBottom: 'auto'}}>
               <strong>Prediction Error:</strong>
               <p>{error}</p>
             </div>
           )}
 
           {result && !loading && (
-            <div className="price-display animate-fade-in">
-              <div className="price-label">Estimated Value</div>
-              <div className="price-value">{result.price}</div>
-              <div className="price-range">Range: {result.range_low} – {result.range_high}</div>
-              <p style={{color: 'var(--text-muted)'}}>Confidence intervals generated via trained regression estimates</p>
+            <div className="result-content-container animate-fade-in">
+              <div className="price-display">
+                <div className="price-label">Estimated Value</div>
+                <div className="price-value">{formatCurrency(result.raw)}</div>
+                <div className="price-range">Range: {formatCurrency(result.raw * 0.90)} – {formatCurrency(result.raw * 1.10)}</div>
+              </div>
+
+              {/* Extras Container */}
+              <div className="analysis-extras">
+                 {/* Deal Analyzer */}
+                 <div className="extra-box deal-analyzer">
+                    <label>Compare Asking Price</label>
+                    <div className="input-with-badge">
+                      <div className="currency-input-wrapper">
+                         <span>{currency === 'USD' ? '$' : '₹'}</span>
+                         <input 
+                           type="number" 
+                           value={askingPrice} 
+                           onChange={(e) => setAskingPrice(e.target.value)}
+                           placeholder="0" 
+                         />
+                      </div>
+                      {getDealBadge() && (
+                        <div className={`deal-badge ${getDealBadge().className}`}>
+                          {getDealBadge().text}
+                        </div>
+                      )}
+                    </div>
+                 </div>
+
+                 {/* EMI Calculator */}
+                 <div className="extra-box emi-calculator">
+                    <div className="emi-header">
+                       <label>Mortgage / EMI Calculator</label>
+                       <div className="emi-result">{formatCurrency(calculateEMI())} <span>/ mo</span></div>
+                    </div>
+                    <div className="emi-controls">
+                       <div className="emi-input">
+                         <label>Term (Years)</label>
+                         <input type="number" min="1" max="40" value={loanTerm} onChange={(e) => setLoanTerm(e.target.value)} />
+                       </div>
+                       <div className="emi-input">
+                         <label>Rate (%)</label>
+                         <input type="number" step="0.1" min="0" max="25" value={interestRate} onChange={(e) => setInterestRate(e.target.value)} />
+                       </div>
+                    </div>
+                 </div>
+              </div>
             </div>
           )}
         </div>
